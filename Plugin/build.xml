@@ -89,4 +89,15 @@
     <!-- version-tag: 1 -->
     <import file="${sdk.dir}/tools/ant/build.xml" />
 
+    <!--
+        h/t https://blog.nraboy.com/2014/06/creating-an-android-java-plugin-for-unity3d/
+
+        run "ant jar"
+    -->
+    <target name="jar" depends="debug">
+        <jar
+            destfile="bin/AudioBypassPlugin.jar"
+            basedir="bin/classes" />
+    </target>
+
 </project>
