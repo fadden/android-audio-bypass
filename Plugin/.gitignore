@@ -1,0 +1,9 @@
+# Output directories
+
+# local properties, don't check in
+local.properties
+
+# VIM leftover
+*~
+*.swp
+
