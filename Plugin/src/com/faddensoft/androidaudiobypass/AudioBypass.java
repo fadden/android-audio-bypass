@@ -1,7 +1,10 @@
 package com.faddensoft.androidaudiobypass;
 
 import android.content.Context;
+import android.content.res.AssetFileDescriptor;
 import android.content.res.AssetManager;
+import android.media.AudioManager;
+import android.media.SoundPool;
 import android.util.Log;
 
 import java.io.IOException;
@@ -9,82 +12,115 @@ import java.io.IOException;
 public class AudioBypass {
     private static String TAG = "AudioBypass";
 
-    private static final AudioBypass mInstance = new AudioBypass();
+    // SoundPool parameters.  These could be args to the AudioBypass
+    // constructor, but except perhaps for MAX_STREAMS there's little
+    // value in doing so.
+    private static final int MAX_STREAMS = 4;
+    private static final int STREAM_TYPE = AudioManager.STREAM_MUSIC;
+    private static final int SRC_QUALITY = 0;
 
+    private final Object mLock = new Object();
     private Context mContext;
     private AssetManager mAssetMan;
+    private SoundPool mSoundPool;
 
 
-    // Get the singleton.
+    // Create a new instance.
     //
     // Unity wasn't able to find this when the return type was
     // AudioBypass; use Object instead.
-    public static Object getInstance() {
-        return mInstance;
+    public static Object createInstance(Context context) {
+        return new AudioBypass(context);
     }
 
-    // Singleton constructor.
+    // Constructor.  Pass in the Activity context.
     //
-    // We don't know much about the environment at this point,
-    // and we don't have the Context yet, so there's not much
-    // we can or should do.
-    private void AudioBypass() {
-        Log.d(TAG, "ctor");
-    }
-
-    public void initialize(Context context) {
+    // We have a final field, so the VM's immutability guarantees
+    // should kick in and ensure that construction is visible to
+    // all threads.
+    private AudioBypass(Context context) {
         if (context == null) {
+            // not strictly necessary, as we'll blow up below,
+            // but it's nice to have an explicit log message
             Log.e(TAG, "context must not be null");
-            throw new NullPointerException("context arg to initialize");
-        }
-        if (mContext != null) {
-            if (context != mContext) {
-                Log.e(TAG, "AudioBypass object initialized twice with different contexts");
-                throw new RuntimeException("AudioBypass already initialized");
-            } else {
-                Log.d(TAG, "AudioBypass already initialized with this context");
-                return;
-            }
+            throw new NullPointerException("context arg");
         }
 
         mContext = context;
         mAssetMan = context.getAssets();
 
-        Log.i(TAG, "AudioBypass initialized: " + context);
+        mSoundPool = new SoundPool(MAX_STREAMS, STREAM_TYPE, SRC_QUALITY);
+
+        Log.i(TAG, "AudioBypass created: " + context);
     }
 
-    private void checkInit() {
-        if (mContext == null) {
-            Log.e(TAG, "AudioBypass object not initialized");
-            throw new RuntimeException("AudioBypass not initialized");
+    // Destroy the SoundPool and all associated resources.
+    //
+    // The AudioBypass object may not be used after this point.
+    public void destroy() {
+        synchronized (mLock) {
+            mSoundPool.release();
+            mSoundPool = null;
+
+            mAssetMan = null;
+            mContext = null;
         }
     }
 
     public void testMethod() {
-        checkInit();
+        synchronized (mLock) {
+            Log.i(TAG, "This is a test");
+            Log.i(TAG, "This is a test");
+            Log.i(TAG, "This is a test");
+            Log.i(TAG, "This is a test");
+            Log.i(TAG, "This is a test");
 
-        Log.i(TAG, "This is a test");
-        Log.i(TAG, "This is a test");
-        Log.i(TAG, "This is a test");
-        Log.i(TAG, "This is a test");
-        Log.i(TAG, "This is a test");
-
-        // For debugging, dump the list of assets found.
-        if (true) {
-            try {
-                String[] assets = mAssetMan.list("");
-                Log.i(TAG, "Found " + assets.length + " assets:");
-                for (int i = 0; i < assets.length; i++) {
-                    Log.i(TAG, i + ": '" + assets[i] + "'");
+            // For debugging, dump the list of assets found.
+            if (true) {
+                try {
+                    String[] assets = mAssetMan.list("");
+                    Log.i(TAG, "Found " + assets.length + " assets:");
+                    for (int i = 0; i < assets.length; i++) {
+                        Log.i(TAG, i + ": '" + assets[i] + "'");
+                    }
+                } catch (IOException ioe) {
+                    Log.e(TAG, "failed " + ioe);
                 }
-            } catch (IOException ioe) {
-                Log.e(TAG, "failed " + ioe);
             }
         }
     }
 
-    public void play(String name) {
-        Log.i(TAG, "Playing " + name);
+    // Registers the sound file with the SoundPool.
+    public int register(String soundFile) {
+        final int LOAD_PRIORITY = 1;    // recommended value; does nothing
+
+        Log.i(TAG, "Registering " + soundFile);
+        synchronized (mLock) {
+            AssetFileDescriptor afd;
+            try {
+                afd = mAssetMan.openFd(soundFile);
+            } catch (IOException ioe) {
+                Log.w(TAG, "Failed to load " + soundFile + ": " + ioe);
+                return -1;
+            }
+
+            int id = mSoundPool.load(afd, LOAD_PRIORITY);
+            Log.i(TAG, " --> " + id);
+            return id;
+        }
+    }
+
+    public int play(int soundId, float leftVolume, float rightVolume,
+            int priority, int loop, float rate) {
+        Log.d(TAG, "Playing " + soundId + ": lv=" + leftVolume +
+                " rv=" + rightVolume + " pr=" + priority + " lp=" + loop +
+                " rt=" + rate);
+        synchronized (mLock) {
+            int streamId = mSoundPool.play(soundId, leftVolume, rightVolume, priority,
+                    loop, rate);
+            Log.d(TAG, " --> streamId=" + streamId);
+            return streamId;
+        }
     }
 }
 
