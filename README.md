@@ -19,9 +19,11 @@ AssetManager.  UI buttons allow you to play either sound with either method
 and observe the difference.
 
 On a Moto X running 4.4.4, there's a significant difference in latency, as
-demonstrated in this video [need youtube link].  On a Nexus 10, there's
-no observable difference.  So while Unity is the proximate cause of latency,
-it varies between devices, and the blame may be shared.
+demonstrated in this video: https://www.youtube.com/watch?v=E_VwFBxf4ew.
+On a Nexus 10, and reportedly on old and new Nexus 7s, there's no
+observable difference.  So while Unity is the proximate cause of latency,
+it varies between devices, and the blame might be shared by more than
+one party.
 
 
 ### Use of this code ###
