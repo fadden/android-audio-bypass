@@ -9,6 +9,8 @@ import android.util.Log;
 
 import java.io.IOException;
 
+// This provides simple access to SoundPool.  It's intended to be used
+// as a Unity 3D plugin for Android.
 public class AudioBypass {
     private static String TAG = "AudioBypass";
 
@@ -51,7 +53,7 @@ public class AudioBypass {
 
         mSoundPool = new SoundPool(MAX_STREAMS, STREAM_TYPE, SRC_QUALITY);
 
-        Log.i(TAG, "AudioBypass created: " + context);
+        Log.d(TAG, "AudioBypass created: " + context);
     }
 
     // Destroy the SoundPool and all associated resources.
@@ -67,34 +69,11 @@ public class AudioBypass {
         }
     }
 
-    public void testMethod() {
-        synchronized (mLock) {
-            Log.i(TAG, "This is a test");
-            Log.i(TAG, "This is a test");
-            Log.i(TAG, "This is a test");
-            Log.i(TAG, "This is a test");
-            Log.i(TAG, "This is a test");
-
-            // For debugging, dump the list of assets found.
-            if (true) {
-                try {
-                    String[] assets = mAssetMan.list("");
-                    Log.i(TAG, "Found " + assets.length + " assets:");
-                    for (int i = 0; i < assets.length; i++) {
-                        Log.i(TAG, i + ": '" + assets[i] + "'");
-                    }
-                } catch (IOException ioe) {
-                    Log.e(TAG, "failed " + ioe);
-                }
-            }
-        }
-    }
-
     // Registers the sound file with the SoundPool.
     public int register(String soundFile) {
         final int LOAD_PRIORITY = 1;    // recommended value; does nothing
 
-        Log.i(TAG, "Registering " + soundFile);
+        Log.d(TAG, "Registering " + soundFile);
         synchronized (mLock) {
             AssetFileDescriptor afd;
             try {
@@ -105,11 +84,12 @@ public class AudioBypass {
             }
 
             int id = mSoundPool.load(afd, LOAD_PRIORITY);
-            Log.i(TAG, " --> " + id);
+            Log.d(TAG, " --> " + id);
             return id;
         }
     }
 
+    // Plays the sound through SoundPool.
     public int play(int soundId, float leftVolume, float rightVolume,
             int priority, int loop, float rate) {
         Log.d(TAG, "Playing " + soundId + ": lv=" + leftVolume +

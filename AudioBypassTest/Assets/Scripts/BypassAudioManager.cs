@@ -3,7 +3,7 @@ using System;
 using System.Collections;
 
 /// <summary>
-/// Manages the interaction with the Java-land audio player.
+/// Manages the interaction with the Android SoundPool object.
 /// </summary>
 ///
 /// There should only be one of these, but that's not strictly required.
@@ -18,6 +18,9 @@ public class BypassAudioManager : MonoBehaviour {
 	private AndroidJavaObject activityContext;		// android.app.Activity; subclass of android.content.Context
 	private AndroidJavaObject audioBypassInstance;	// com.faddensoft.androidaudiobypass.AudioBypass
 
+	/// <summary>
+	/// Creates an instance of the AudioBypass object, using the Unity JNI bridge.
+	/// </summary>
 	void Awake() {
 		if (Application.platform != RuntimePlatform.Android) {
 			Debug.LogError("BypassAudioManager only works on Android");
@@ -29,21 +32,25 @@ public class BypassAudioManager : MonoBehaviour {
 		}
 
 		using (AndroidJavaClass pluginClass = new AndroidJavaClass("com.faddensoft.androidaudiobypass.AudioBypass")) {
-			Debug.Log("pluginClass is " + pluginClass);
+			//Debug.Log("pluginClass is " + pluginClass);
 			audioBypassInstance = pluginClass.CallStatic<AndroidJavaObject>("createInstance", activityContext);
 		}
 
-		if (true) {
+#if false	// debug stuff
+		audioBypassInstance.Call("testMethod");
+
+		activityContext.Call("runOnUiThread", new AndroidJavaRunnable(() => {
 			audioBypassInstance.Call("testMethod");
-			
-			activityContext.Call("runOnUiThread", new AndroidJavaRunnable(() => {
-				audioBypassInstance.Call("testMethod");
-			}));
-			
-			Debug.Log("Streaming assets path is '" + Application.streamingAssetsPath + "'");
-		}
+		}));
+
+		Debug.Log("Streaming assets path is '" + Application.streamingAssetsPath + "'");
+#endif
 	}
 
+	/// <summary>
+	/// Handles object shutdown.  We explicitly shut the SoundPool down to release
+	/// resources without having to go through various garbage collection passes.
+	/// </summary>
 	void OnDestroy() {
 		if (audioBypassInstance != null) {
 			Debug.Log("Shutting down SoundPool");
@@ -52,6 +59,11 @@ public class BypassAudioManager : MonoBehaviour {
 		}
 	}
 
+	/// <summary>
+	/// Registers a sound file with the SoundPool.
+	/// </summary>
+	/// <returns>The sound ID to use on subsequent play() calls.</returns>
+	/// <param name="soundFile">File name in StreamingAssets directory.</param>
 	public int RegisterSoundFile(string soundFile) {
 		if (audioBypassInstance == null) { return -1; }
 
@@ -61,11 +73,17 @@ public class BypassAudioManager : MonoBehaviour {
 
 		int soundId = audioBypassInstance.Call<int>("register", soundFile);
 		Debug.Log("Registered " + soundFile + " as ID " + soundId);
+
+		// TODO: the sound isn't necessarily ready to play at this point -- the
+		// load mechanism is asynchronous.  We would need to tie into the
+		// SoundPool OnLoadCompleteListener to figure out when sounds were
+		// actually ready to go.
+
 		return soundId;
 	}
 
 	public void UnregisterSound(int soundId) {
-		// TODO
+		// TODO -- should call through to SoundPool.unload(soundId)
 	}
 
 	/// <summary>
@@ -86,6 +104,10 @@ public class BypassAudioManager : MonoBehaviour {
 		                                             priority, loop, rate);
 		if (streamId == -1) {
 			Debug.LogWarning("PlaySound id=" + soundId + " failed");
+
+			// TODO: this is useful for sounds that are looping (so you
+			// can stop them) or just very long, like music.  We should
+			// return it and provide the relevant functions.
 		}
 	}
 }
