@@ -10,8 +10,13 @@ Obj/
 *.csproj
 *.unityproj
 *.sln
+*.suo
 *.user
 *.userprefs
+
+# UnityVS (Visual Studio integration)
+Assets/UnityVS.meta
+Assets/UnityVS/
 
 # VIM leftover
 *~
